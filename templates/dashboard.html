@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Health Monitor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2f855a;
+            --secondary-color: #38b2ac;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+        }
+
+        body {
+            background: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar-custom {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem 2rem;
+        }
+
+        .navbar-custom .navbar-brand {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: white;
+        }
+
+        .navbar-custom .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+            margin-left: 1.5rem;
+            font-weight: 500;
+        }
+
+        .navbar-custom .nav-link.logout-link {
+            font-size: 1.1em;
+            padding: 0.6rem 1rem;
+            border: 1px solid rgba(255,255,255,0.8);
+            border-radius: 5px;
+        }
+
+        .doctor-info {
+            color: rgba(255, 255, 255, 0.9);
+            margin-left: auto;
+            font-size: 0.95em;
+        }
+
+        .container-fluid {
+            padding: 2rem;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-header h1 {
+            color: #1f2937;
+            font-weight: 700;
+            font-size: 2.5em;
+        }
+
+        .vitals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .vital-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            border: 2px solid transparent;
+        }
+
+        .vital-card.bpm { border-color: var(--danger-color); }
+        .vital-card.spo2 { border-color: var(--primary-color); }
+        .vital-card.cough { border-color: var(--warning-color); }
+        .vital-card.temperature { border-color: var(--secondary-color); }
+        .vital-card.humidity { border-color: var(--primary-color); }
+
+        .vital-value {
+            font-size: 3em;
+            font-weight: 700;
+        }
+
+        .vital-status {
+            padding: 0.6rem;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-top: 1rem;
+        }
+
+        .status-normal { background: #d1fae5; color: #065f46; }
+        .status-warning { background: #fef3c7; color: #92400e; }
+        .status-critical { background: #fee2e2; color: #991b1b; }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .chart-container {
+            height: 300px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: #6b7280;
+            margin-top: 3rem;
+            border-top: 1px solid #e5e7eb;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-custom">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/dashboard">🏥 Health Monitor</a>
+        <div class="ms-auto">
+            <a class="nav-link" href="/analysis" style="color: rgba(255, 255, 255, 0.9); margin-right: 1.5rem; font-weight: 500;">🔬 Analysis</a>
+            <a class="nav-link logout-link" href="/logout">🚪 Logout</a>
+        </div>
+        <div class="doctor-info">
+            👨‍⚕️ Dr. {{ doctor }}
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid">
+
+    <!-- HEADER + DOWNLOAD BUTTON -->
+    <div class="page-header d-flex justify-content-between align-items-center">
+        <div>
+            <h1>📈 Real-Time Monitoring</h1>
+            <p>Patient Vital Signs and Health Status</p>
+        </div>
+
+        <a href="/api/download-csv" 
+           class="btn btn-success btn-lg shadow">
+            📥 Download Health Data (CSV)
+        </a>
+    </div>
+
+    <!-- Vital Cards -->
+    <div class="vitals-grid">
+        <div class="vital-card bpm">
+            <h5>❤️ Heart Rate</h5>
+            <div class="vital-value"><span id="bpmValue">--</span> BPM</div>
+            <div id="bpmStatus" class="vital-status status-normal">Normal</div>
+        </div>
+
+        <div class="vital-card spo2">
+            <h5>🫁 Oxygen Saturation</h5>
+            <div class="vital-value"><span id="spo2Value">--</span> %</div>
+            <div id="spo2Status" class="vital-status status-normal">Normal</div>
+        </div>
+
+        <div class="vital-card cough">
+            <h5>🤒 Cough Detection</h5>
+            <div class="vital-value"><span id="coughLevel">--</span> dB</div>
+            <div id="coughStatus" class="vital-status status-normal">No Cough</div>
+        </div>
+
+        <div class="vital-card temperature">
+            <h5>🌡️ Temperature</h5>
+            <div class="vital-value"><span id="tempValue">--</span> °C</div>
+            <div id="tempStatus" class="vital-status status-normal">Normal</div>
+        </div>
+
+        <div class="vital-card humidity">
+            <h5>💧 Humidity</h5>
+            <div class="vital-value"><span id="humValue">--</span> %</div>
+            <div id="humStatus" class="vital-status status-normal">Normal</div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-grid">
+        <div class="chart-card">
+            <h5>Heart Rate Trend</h5>
+            <div class="chart-container">
+                <canvas id="bpmChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h5>SpO2 Trend</h5>
+            <div class="chart-container">
+                <canvas id="spo2Chart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h5>Cough Audio Signal</h5>
+            <div class="chart-container">
+                <canvas id="audioChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h5>Temperature Trend</h5>
+            <div class="chart-container">
+                <canvas id="tempChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h5>Humidity Trend</h5>
+            <div class="chart-container">
+                <canvas id="humChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="footer">
+    <p>Data Auto-Updates Every 500ms</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// Initialize data storage
+let bpmData = [];
+let spo2Data = [];
+let audioData = [];
+let tempData = [];
+let humData = [];
+let timestamps = [];
+let bpmChart, spo2Chart, audioChart, tempChart, humChart;
+
+// Chart configuration
+function getChartConfig(type, label, color, data, labels) {
+    if (type === 'line') {
+        return {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: label,
+                    data: data,
+                    borderColor: color,
+                    backgroundColor: color.replace('rgb', 'rgba').replace(')', ', 0.1)'),
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointBackgroundColor: color,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 0 },
+                scales: {
+                    y: { beginAtZero: false, grace: '10%' }
+                },
+                plugins: {
+                    legend: { display: true }
+                }
+            }
+        };
+    } else {
+        return {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: label,
+                    data: data,
+                    backgroundColor: color
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 0 },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        };
+    }
+}
+
+// Initialize charts after page load
+function initCharts() {
+    const bpmCtx = document.getElementById('bpmChart').getContext('2d');
+    const spo2Ctx = document.getElementById('spo2Chart').getContext('2d');
+    const audioCtx = document.getElementById('audioChart').getContext('2d');
+    const tempCtx = document.getElementById('tempChart').getContext('2d');
+    const humCtx = document.getElementById('humChart').getContext('2d');
+
+    bpmChart = new Chart(bpmCtx, getChartConfig('line', 'Heart Rate (BPM)', '#ef4444', bpmData, timestamps));
+    spo2Chart = new Chart(spo2Ctx, getChartConfig('line', 'SpO2 (%)', '#2f855a', spo2Data, timestamps));
+    audioChart = new Chart(audioCtx, getChartConfig('bar', 'Audio Level (dB)', '#f59e0b', audioData, timestamps));
+    tempChart = new Chart(tempCtx, getChartConfig('line', 'Temperature (°C)', '#6366f1', tempData, timestamps));
+    humChart = new Chart(humCtx, getChartConfig('line', 'Humidity (%)', '#0ea5e9', humData, timestamps));
+}
+
+function updateStatus(value, elementId, thresholds) {
+    const statusEl = document.getElementById(elementId);
+    if (!statusEl) return;
+
+    if (value === 0 || value === null) {
+        statusEl.className = 'vital-status status-warning';
+        statusEl.textContent = 'No Data';
+    } else if (thresholds.critical && (value < thresholds.critical[0] || value > thresholds.critical[1])) {
+        statusEl.className = 'vital-status status-critical';
+        statusEl.textContent = 'Critical';
+    } else if (thresholds.warning && (value < thresholds.warning[0] || value > thresholds.warning[1])) {
+        statusEl.className = 'vital-status status-warning';
+        statusEl.textContent = 'Warning';
+    } else {
+        statusEl.className = 'vital-status status-normal';
+        statusEl.textContent = 'Normal';
+    }
+}
+
+async function updateDashboard() {
+    try {
+        const res = await fetch('/api/data');
+        if (!res.ok) throw new Error('API error');
+        
+        const data = await res.json();
+        
+        // Parse data - accept any value
+        const bpm = Math.max(0, parseInt(data.bpm) || 0);
+        const spo2 = Math.max(0, parseInt(data.spo2) || 0);
+        const audio = Math.max(0, parseInt(data.audio) || 0);
+        const temp = parseFloat(data.temperature) || 0;
+        const hum = parseFloat(data.humidity) || 0;
+
+        // Update vital signs display
+        document.getElementById('bpmValue').textContent = bpm;
+        document.getElementById('spo2Value').textContent = spo2;
+        document.getElementById('coughLevel').textContent = audio;
+        document.getElementById('tempValue').textContent = temp.toFixed(1);
+        document.getElementById('humValue').textContent = hum;
+
+        // Update status indicators
+        updateStatus(bpm, 'bpmStatus', {
+            critical: [40, 120],
+            warning: [50, 100]
+        });
+        updateStatus(spo2, 'spo2Status', {
+            critical: [0, 89],
+            warning: [90, 94]
+        });
+        updateStatus(audio, 'coughStatus', {
+            critical: [350, Infinity],
+            warning: [200, 349]
+        });
+        updateStatus(temp, 'tempStatus', {
+            critical: [34, 39],
+            warning: [35.5, 37.5]
+        });
+        updateStatus(hum, 'humStatus', {
+            critical: [10, 90],
+            warning: [20, 70]
+        });
+
+        // Add to chart data - always update
+        const time = new Date().toLocaleTimeString();
+        
+        timestamps.push(time);
+        bpmData.push(bpm);
+        spo2Data.push(spo2);
+        audioData.push(audio);
+        tempData.push(temp);
+        humData.push(hum);
+
+        // Keep only last 30 data points
+        if (timestamps.length > 30) {
+            timestamps.shift();
+            bpmData.shift();
+            spo2Data.shift();
+            audioData.shift();
+            tempData.shift();
+            humData.shift();
+        }
+
+        // Update charts
+        if (bpmChart && spo2Chart && audioChart && tempChart && humChart) {
+            bpmChart.data.labels = timestamps;
+            bpmChart.data.datasets[0].data = bpmData;
+            bpmChart.update('none');
+
+            spo2Chart.data.labels = timestamps;
+            spo2Chart.data.datasets[0].data = spo2Data;
+            spo2Chart.update('none');
+
+            audioChart.data.labels = timestamps;
+            audioChart.data.datasets[0].data = audioData;
+            audioChart.update('none');
+
+            tempChart.data.labels = timestamps;
+            tempChart.data.datasets[0].data = tempData;
+            tempChart.update('none');
+
+            humChart.data.labels = timestamps;
+            humChart.data.datasets[0].data = humData;
+            humChart.update('none');
+        }
+    } catch (error) {
+        console.error('Update error:', error);
+    }
+}
+
+// Initialize and start updates
+document.addEventListener('DOMContentLoaded', function() {
+    initCharts();
+    updateDashboard();
+    setInterval(updateDashboard, 1000);
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis - Health Monitor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2f855a;
+            --secondary-color: #38b2ac;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Navbar */
+        .navbar-custom {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem 2rem;
+        }
+
+        .navbar-custom .navbar-brand {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: white;
+        }
+
+        .navbar-custom .nav-item .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+            margin-left: 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-custom .nav-item .nav-link:hover {
+            color: white !important;
+            transform: translateY(-2px);
+        }
+
+        .navbar-custom .nav-item.active .nav-link {
+            color: white !important;
+            border-bottom: 3px solid white;
+            padding-bottom: 0.5rem;
+        }
+
+        /* bigger logout link for accessibility */
+        .navbar-custom .nav-link.logout-link {
+            font-size: 1.15em;
+            padding: 0.75rem 1rem;
+            border: 1px solid rgba(255,255,255,0.8);
+            border-radius: 4px;
+        }
+
+        .doctor-info {
+            color: rgba(255, 255, 255, 0.9);
+            margin-left: auto;
+            font-size: 0.95em;
+        }
+
+        /* Main Content */
+        .container-fluid {
+            padding: 2rem;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        .page-header h1 {
+            color: #1f2937;
+            font-weight: 700;
+            font-size: 2.5em;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-header p {
+            color: #6b7280;
+            font-size: 1.1em;
+        }
+
+        /* Main Grid */
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            animation: fadeIn 0.6s ease-out 0.2s both;
+        }
+
+        @media (max-width: 1200px) {
+            .analysis-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Card Styles */
+        .analysis-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .analysis-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-title {
+            color: #1f2937;
+            font-size: 1.4em;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 1rem;
+        }
+
+        /* Risk Assessment Card */
+        .risk-level {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .risk-level.normal {
+            background-color: #d1fae5;
+            color: #065f46;
+            border: 2px solid var(--success-color);
+        }
+
+        .risk-level.warning {
+            background-color: #fef3c7;
+            color: #92400e;
+            border: 2px solid var(--warning-color);
+        }
+
+        .risk-level.critical {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 2px solid var(--danger-color);
+        }
+
+        .risk-icon {
+            font-size: 3em;
+        }
+
+        .risk-info h3 {
+            font-size: 1.8em;
+            margin: 0;
+        }
+
+        .risk-info p {
+            margin: 0.5rem 0 0 0;
+            opacity: 0.8;
+        }
+
+        /* Input Form */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-analyze {
+            width: 100%;
+            padding: 1.25rem; /* slightly larger tappable area */
+            font-size: 1.1em;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-analyze:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-analyze:active {
+            transform: translateY(0);
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .metric-box {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .metric-label {
+            color: #6b7280;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            color: #1f2937;
+            font-size: 2em;
+            font-weight: 700;
+        }
+
+        /* Recommendations */
+        .recommendations-list {
+            list-style: none;
+        }
+
+        .recommendations-list li {
+            padding: 1rem;
+            background-color: #f3f4f6;
+            border-left: 4px solid var(--primary-color);
+            margin-bottom: 0.75rem;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .recommendations-list li:hover {
+            background-color: #f0f3f7;
+            transform: translateX(5px);
+        }
+
+        .recommendations-list li.warning {
+            border-color: var(--warning-color);
+            background-color: #fffbeb;
+        }
+
+        .recommendations-list li.critical {
+            border-color: var(--danger-color);
+            background-color: #fef2f2;
+        }
+
+        /* History Chart */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 2rem;
+        }
+
+        /* Statistics Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+            animation: fadeIn 0.6s ease-out 0.4s both;
+        }
+
+        @media (max-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border-top: 4px solid var(--primary-color);
+        }
+
+        .stat-icon {
+            font-size: 2.5em;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.9em;
+            margin-top: 0.5rem;
+        }
+
+        /* Loading State */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner-border {
+            color: var(--primary-color);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Full Width Card */
+        .full-width-card {
+            grid-column: 1 / -1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-custom">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard">🏥 Health Monitor</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">📊 Dashboard</a>
+                    </li>
+                    <!-- analysis link deliberately omitted to avoid redundancy -->
+                    <li class="nav-item">
+                        <a class="nav-link logout-link" href="/logout">🚪 Logout</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="doctor-info">
+                👨‍⚕️ Dr. {{ doctor }}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid">
+        <div class="page-header">
+            <h1>🔬 Health Analysis</h1>
+            <p>ML-Based Risk Assessment & Clinical Recommendations</p>
+        </div>
+
+        <!-- Analysis Grid -->
+        <div class="analysis-grid">
+            <!-- CSV Upload -->
+            <div class="analysis-card">
+                <h2 class="card-title">📤 Upload CSV File</h2>
+                
+                <form id="csvUploadForm">
+                    <div class="form-group">
+                        <label for="csvFile" style="display: block; padding: 2rem; background: #f3f4f6; border: 2px dashed #9ca3af; border-radius: 8px; text-align: center; cursor: pointer; transition: all 0.3s ease;">
+                            <div style="font-size: 2em; margin-bottom: 0.5rem;">📁</div>
+                            <div style="color: #374151; font-weight: 600;">Click to upload CSV</div>
+                            <div style="color: #6b7280; font-size: 0.9em; margin-top: 0.5rem;">or drag and drop</div>
+                        </label>
+                        <input 
+                            type="file" 
+                            id="csvFile" 
+                            name="csvFile" 
+                            accept=".csv"
+                            style="display: none;"
+                        >
+                    </div>
+
+                    <div id="fileName" style="color: #10b981; text-align: center; margin-bottom: 1rem; display: none;"></div>
+
+                    <button type="submit" class="btn-analyze">🔍 Analyze CSV</button>
+                </form>
+
+                <div class="loading" id="loading" style="display: none;">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Processing CSV data...</p>
+                </div>
+            </div>
+
+            <!-- Analysis Results -->
+            <div class="analysis-card">
+                <h2 class="card-title">⚠️ Risk Assessment</h2>
+                
+                <div id="riskResult">
+                    <p style="color: #9ca3af; text-align: center; padding: 2rem;">
+                        Upload a CSV file to see analysis
+                    </p>
+                </div>
+
+                <div class="metrics-grid" id="metricsGrid" style="display: none;">
+                    <div class="metric-box">
+                        <div class="metric-label">Avg BPM</div>
+                        <div class="metric-value" id="resultBpm">-</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Avg SpO2</div>
+                        <div class="metric-value" id="resultSpo2">-</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">Avg Audio</div>
+                        <div class="metric-value" id="resultAudio">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="analysis-card full-width-card" style="animation: fadeIn 0.6s ease-out 0.6s both;">
+            <h2 class="card-title">💡 Clinical Recommendations</h2>
+            <div id="recommendationsContent">
+                <p style="color: #9ca3af; text-align: center; padding: 2rem;">
+                    Recommendations will appear after analysis
+                </p>
+            </div>
+        </div>
+
+        <!-- Disease Prediction -->
+        <div class="analysis-card full-width-card" style="animation: fadeIn 0.6s ease-out 0.6s both;">
+            <h2 class="card-title">🔬 Disease Prediction</h2>
+            <div id="diseasePredictionContent">
+                <p style="color: #9ca3af; text-align: center; padding: 2rem;">
+                    Enter vitals above to see predicted conditions
+                </p>
+            </div>
+        </div>
+
+        <!-- Real-time Data -->
+        <div class="stats-grid" style="animation: fadeIn 0.6s ease-out 0.8s both;">
+            <div class="stat-card">
+                <div class="stat-icon">❤️</div>
+                <div class="stat-value" id="liveBpm">--</div>
+                <div class="stat-label">Current BPM</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🫁</div>
+                <div class="stat-value" id="liveSpo2">--</div>
+                <div class="stat-label">Current SpO2 %</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🤒</div>
+                <div class="stat-value" id="liveCough">--</div>
+                <div class="stat-label">Cough Level</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🕐</div>
+                <div class="stat-value" id="lastUpdate">--:--</div>
+                <div class="stat-label">Last Update</div>
+            </div>
+        </div>
+
+        <!-- Historical Chart -->
+        <div class="analysis-card full-width-card" style="animation: fadeIn 0.6s ease-out 1s both;">
+            <h2 class="card-title">📈 Historical Trend (Last 100 Records)</h2>
+            <div class="chart-container">
+                <canvas id="historyChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize history chart
+        let historyChart = null;
+
+        function initHistoryChart() {
+            const ctx = document.getElementById('historyChart').getContext('2d');
+            historyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'BPM',
+                            data: [],
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'SpO2 %',
+                            data: [],
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'BPM'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'SpO2 %'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // CSV File Upload Handler
+        const csvFile = document.getElementById('csvFile');
+        const csvLabel = csvFile.parentElement;
+        const fileName = document.getElementById('fileName');
+        const csvForm = document.getElementById('csvUploadForm');
+
+        // Drag and drop
+        csvLabel.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            csvLabel.style.background = '#e0e7ff';
+            csvLabel.style.borderColor = '#667eea';
+        });
+
+        csvLabel.addEventListener('dragleave', () => {
+            csvLabel.style.background = '#f3f4f6';
+            csvLabel.style.borderColor = '#9ca3af';
+        });
+
+        csvLabel.addEventListener('drop', (e) => {
+            e.preventDefault();
+            csvLabel.style.background = '#f3f4f6';
+            csvLabel.style.borderColor = '#9ca3af';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                csvFile.files = files;
+                updateFileName(files[0]);
+            }
+        });
+
+        // File selection
+        csvFile.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                updateFileName(e.target.files[0]);
+            }
+        });
+
+        function updateFileName(file) {
+            if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+                fileName.textContent = '❌ Only CSV files allowed';
+                fileName.style.color = '#dc2626';
+                csvFile.value = '';
+            } else {
+                fileName.textContent = '✅ ' + file.name;
+                fileName.style.color = '#10b981';
+                fileName.style.display = 'block';
+            }
+        }
+
+        // CSV Form submission
+        csvForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (csvFile.files.length === 0) {
+                alert('Please select a CSV file');
+                return;
+            }
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('riskResult').style.display = 'none';
+            document.getElementById('metricsGrid').style.display = 'none';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', csvFile.files[0]);
+
+                const response = await fetch('/api/analyze-csv', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Analysis failed');
+                }
+
+                // Display metrics
+                document.getElementById('resultBpm').textContent = data.avg_bpm;
+                document.getElementById('resultSpo2').textContent = data.avg_spo2;
+                document.getElementById('resultAudio').textContent = data.avg_audio;
+                document.getElementById('metricsGrid').style.display = 'grid';
+
+                // Display risk level
+                const riskClass = data.status === 'Healthy' ? 'normal' : 'warning';
+                const riskIcon = data.status === 'Healthy' ? '✅' : '⚠️';
+
+                document.getElementById('riskResult').innerHTML = `
+                    <div class="risk-level ${riskClass}">
+                        <div class="risk-icon">${riskIcon}</div>
+                        <div class="risk-info">
+                            <h3>${data.status}</h3>
+                            <p>Analyzed ${data.records_analyzed} records</p>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('riskResult').style.display = 'block';
+
+                // Display disease prediction
+                let diseaseHTML = '';
+                if (data.diseases.length === 0) {
+                    diseaseHTML = `
+                        <div style="padding: 2rem; text-align: center; background: #d1fae5; border-radius: 12px; border: 2px solid #10b981;">
+                            <div style="font-size: 3em; margin-bottom: 1rem;">✅</div>
+                            <h3 style="color: #065f46; margin: 0; font-weight: 600;">All Vitals Normal</h3>
+                            <p style="color: #047857; margin-top: 0.5rem;">Patient appears healthy based on analyzed data</p>
+                        </div>
+                    `;
+                } else {
+                    diseaseHTML = `
+                        <div style="padding: 2rem; background: #fffbeb; border-radius: 12px; border: 2px solid #f59e0b;">
+                            <h4 style="color: #92400e; margin-top: 0; display: flex; align-items: center;">
+                                <span style="font-size: 1.5em; margin-right: 0.5rem;">🔬</span>
+                                Detected Conditions
+                            </h4>
+                            <ul class="recommendations-list" style="margin-top: 1.5rem;">
+                    `;
+                    
+                    data.diseases.forEach((disease, idx) => {
+                        const percentColor = disease.probability > 0.7 ? '#dc2626' : '#f97316';
+                        diseaseHTML += `
+                            <li style="background: white; border-left: 4px solid ${percentColor}; padding: 1.25rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <div>
+                                        <strong style="color: #1f2937;">${idx + 1}. ${disease.name}</strong>
+                                        <p style="color: #6b7280; margin: 0.5rem 0 0; font-size: 0.95em;">${disease.description}</p>
+                                    </div>
+                                    <div style="text-align: center; min-width: 80px;">
+                                        <div style="font-size: 0.85em; color: #6b7280; margin-bottom: 0.25rem;">Probability</div>
+                                        <div style="font-weight: 700; font-size: 1.3em; color: ${percentColor};">${Math.round(disease.probability * 100)}%</div>
+                                    </div>
+                                </div>
+                            </li>
+                        `;
+                    });
+                    
+                    diseaseHTML += `
+                            </ul>
+                            <p style="color: #92400e; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #fcd34d; font-size: 0.95em;">
+                                ℹ️ <strong>Note:</strong> This is a preliminary AI-based analysis. Please consult with a healthcare professional for proper diagnosis.
+                            </p>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('diseasePredictionContent').innerHTML = diseaseHTML;
+
+            } catch (error) {
+                console.error('CSV Analysis error:', error);
+                document.getElementById('riskResult').innerHTML = `
+                    <div style="color: #dc2626; padding: 1rem; background: #fee2e2; border-radius: 8px;">
+                        ❌ Error: ${error.message}
+                    </div>
+                `;
+                document.getElementById('riskResult').style.display = 'block';
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        });
+
+        // Update live data
+        async function updateLiveData() {
+            try {
+                const res = await fetch('/api/data');
+                const data = await res.json();
+
+                document.getElementById('liveBpm').textContent = Math.round(data.bpm);
+                document.getElementById('liveSpo2').textContent = Math.round(data.spo2);
+                document.getElementById('liveCough').textContent = Math.round(data.audio);
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+            } catch (e) {
+                console.log('Live data update error');
+            }
+        }
+
+        // Update history chart
+        async function updateHistoryChart() {
+            try {
+                const res = await fetch('/api/history');
+                const history = await res.json();
+
+                if (history.length === 0) return;
+
+                const bpmData = history.map(h => h.bpm);
+                const spo2Data = history.map(h => h.spo2);
+                const labels = history.map((_, i) => i);
+
+                historyChart.data.labels = labels;
+                historyChart.data.datasets[0].data = bpmData;
+                historyChart.data.datasets[1].data = spo2Data;
+                historyChart.update();
+            } catch (e) {
+                console.log('History update error');
+            }
+        }
+
+        // Initialize and update
+        initHistoryChart();
+        updateLiveData();
+        updateHistoryChart();
+
+        setInterval(updateLiveData, 1000);
+        setInterval(updateHistoryChart, 5000);
+    </script>
+</body>
+</html>
